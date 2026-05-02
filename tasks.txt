@@ -1,0 +1,586 @@
+0. Initial setup
+
+- Initialize Git repository
+- Set up Python environment:
+  - pyenv
+  - venv / .venv
+- Create README.md
+- Define project goals
+- Define MVP scope
+- Define initial input data format
+- Define expected output format
+- Create .gitignore
+- Create pyproject.toml
+- Decide on first database engine: SQLite
+- Decide on future database engine: PostgreSQL
+- Decide on main Python SQL library: SQLAlchemy
+- Decide on migration tool: Alembic
+
+
+1. File structure
+
+tai4fdb/
+├── data/
+│   ├── raw/
+│   ├── processed/
+│   └── external/
+├── db/
+├── notebooks/
+├── reports/
+├── sql/
+├── src/
+│   └── fungal_tai/
+│       ├── config.py
+│       ├── database.py
+│       ├── models.py
+│       ├── cli.py
+│       ├── parsers/
+│       ├── services/
+│       ├── analysis/
+│       └── visualization/
+├── tests/
+├── README.md
+├── pyproject.toml
+└── .gitignore
+
+
+Future modules:
+
+api/
+streamlit_app/
+nextflow/
+docker/
+
+
+2. SQL model
+
+Core tables:
+
+- organisms
+- assemblies
+- sequence_files
+- coding_sequences
+- trna_genes
+- codon_counts
+- codon_weights
+- tai_results
+- analysis_runs
+
+Extended tables:
+
+- taxonomy
+- go_terms
+- pfam_domains
+- lcr_regions
+- gene_sets
+- organism_traits
+- external_references
+- organism_notes
+- validation_runs
+
+
+3. First record: Postia placenta
+
+Initial input data:
+
+- Genome FASTA
+- CDS FASTA
+- tRNAscan-SE output
+- Genetic code
+
+Later input data:
+
+- GO annotations
+- PFAM annotations
+- LCR regions
+- Lifestyle
+- Host range
+- Housekeeping genes
+- Ribosomal genes
+- Literature notes
+- External references
+
+
+4. Data to store
+
+For organism:
+
+- full_scientific_name
+- shortened_name
+- strain
+- taxon_id
+- lifestyle
+- source_database
+- notes
+
+For assembly:
+
+- assembly_accession
+- assembly_name
+- genome_version
+- genetic_code_id
+- source
+- date_imported
+
+For CDS:
+
+- sequence_id
+- gene_id
+- product
+- sequence
+- length_nt
+- length_aa
+- gc_content
+- gc3_content
+- internal_stop
+- ambiguous_bases
+- chromosome_or_contig
+- start
+- end
+- strand
+
+For tRNA:
+
+- anticodon
+- amino_acid
+- copy_number
+- score
+- location
+- source_tool
+
+For tAI:
+
+- tai_value
+- method
+- weights_source
+- tool_version
+- analysis_run_id
+
+For taxonomy:
+
+- taxon_id
+- species
+- genus
+- family
+- order
+- class
+- phylum
+- kingdom
+
+For sequence metrics:
+
+- cds_id
+- metric_name
+- metric_value
+- method
+
+Examples of sequence metrics:
+
+- ENC
+- GC
+- GC3
+- CAI
+- Fop
+- length
+- LCR_fraction
+
+
+5. MVP workflow
+
+Goal: import one organism and calculate basic sequence-level statistics.
+
+Steps:
+
+1. Create database schema.
+2. Import organism metadata.
+3. Import assembly metadata.
+4. Register input files.
+5. Import CDS FASTA.
+6. Validate CDS sequences.
+7. Calculate sequence metrics:
+   - length
+   - GC
+   - GC3
+   - ambiguous bases
+   - internal stop codons
+8. Calculate codon usage per CDS.
+9. Import tRNAscan-SE output.
+10. Calculate tRNA copy number per anticodon.
+11. Calculate codon weights.
+12. Calculate tAI per CDS.
+13. Store all results in the database.
+14. Export summary tables.
+15. Generate first plots.
+
+
+6. Quality control
+
+CDS-level QC:
+
+- length divisible by 3
+- no internal stop codons
+- valid start codon
+- valid terminal stop codon
+- no ambiguous nucleotides
+- minimum length threshold
+- duplicated sequence IDs
+- duplicated gene IDs
+- extreme GC content
+- extreme GC3 content
+
+Assembly-level QC:
+
+- number of CDS
+- number of valid CDS
+- number of excluded CDS
+- total CDS length
+- mean CDS length
+- median CDS length
+- number of predicted tRNA genes
+- number of unique anticodons
+- missing amino acid families
+- unusual codon usage patterns
+
+
+7. Codon usage
+
+Store codon counts in long format:
+
+- cds_id
+- codon
+- count
+
+Useful summaries:
+
+- codon counts per CDS
+- codon counts per assembly
+- codon frequency per assembly
+- relative synonymous codon usage
+- codon usage comparison between organisms
+
+Important filters:
+
+- exclude stop codons
+- exclude codons containing ambiguous bases
+- optionally exclude very short CDS
+- respect organism-specific genetic code
+
+
+8. tRNA data
+
+Input:
+
+- tRNAscan-SE output
+
+Data to extract:
+
+- contig
+- start
+- end
+- strand
+- tRNA type
+- anticodon
+- score
+- intron coordinates if present
+
+Derived data:
+
+- copy number per anticodon
+- copy number per amino acid
+- missing anticodons
+- total tRNA gene count
+- unique anticodon count
+
+
+9. tAI calculation
+
+Required inputs:
+
+- CDS codon counts
+- tRNA anticodon counts
+- codon-to-anticodon pairing rules
+- genetic code
+- codon weights
+
+Store:
+
+- tAI value per CDS
+- method name
+- method version
+- weight table
+- analysis run ID
+- excluded codons
+- genetic code used
+
+Validation:
+
+- compare with stAIcalc
+- compare with previous scripts
+- compare with manually calculated toy examples
+- calculate correlation between methods
+- calculate mean absolute error
+- inspect outliers
+
+
+10. CLI
+
+Planned commands:
+
+- tai4fdb init-db
+- tai4fdb import-organism
+- tai4fdb import-assembly
+- tai4fdb import-cds
+- tai4fdb import-trnascan
+- tai4fdb qc
+- tai4fdb count-codons
+- tai4fdb calculate-weights
+- tai4fdb calculate-tai
+- tai4fdb summarize
+- tai4fdb export
+- tai4fdb plot
+
+Example:
+
+tai4fdb import-organism \
+  --name "Postia placenta" \
+  --strain "MAD-698-R" \
+  --genome data/raw/postia_placenta/genome.fna \
+  --cds data/raw/postia_placenta/cds.fna \
+  --trnascan data/raw/postia_placenta/trnascan.tsv
+
+
+11. Python integration
+
+Main libraries:
+
+- SQLAlchemy
+- Alembic
+- Biopython
+- pandas
+- numpy
+- Typer
+- Rich
+- pytest
+- matplotlib
+- plotly
+- Streamlit
+
+Database layer:
+
+- SQLAlchemy ORM for models
+- SQLAlchemy Core for complex queries
+- Alembic for migrations
+
+Bioinformatics layer:
+
+- Biopython for FASTA parsing
+- custom functions for codon counting
+- custom functions for GC, GC3, ENC, tAI
+- external tRNAscan-SE execution or output import
+
+
+12. Basic GUI
+
+First GUI: Streamlit.
+
+Main pages:
+
+- Organism overview
+- Assembly overview
+- CDS browser
+- tAI distribution
+- Codon usage
+- tRNA abundance
+- Top/bottom CDS
+- QC report
+- Organism comparison
+
+Filters:
+
+- organism
+- assembly
+- CDS length
+- tAI range
+- GC range
+- GC3 range
+- ENC range
+- internal stop status
+- ambiguous bases
+- GO term
+- PFAM domain
+- gene set
+
+
+13. Reports and visualizations
+
+Basic plots:
+
+- tAI histogram
+- tAI boxplot per organism
+- GC vs tAI scatterplot
+- GC3 vs tAI scatterplot
+- CDS length vs tAI scatterplot
+- ENC vs tAI scatterplot
+- codon usage heatmap
+- tRNA copy number barplot
+- top/bottom CDS table
+
+Summary tables:
+
+- organism summary
+- assembly summary
+- CDS summary
+- codon usage summary
+- tRNA summary
+- tAI summary
+- QC summary
+
+Comparison modes:
+
+- selected organism vs all organisms
+- selected organism vs selected background
+- selected organism vs taxonomic group
+- high-tAI genes vs low-tAI genes
+- ribosomal genes vs non-ribosomal genes
+- housekeeping genes vs all genes
+
+
+14. PostgreSQL migration
+
+Move from SQLite to PostgreSQL after:
+
+- database schema is stable
+- import pipeline works
+- tAI calculation is validated
+- several organisms are imported
+- CLI works
+- basic GUI works
+
+Reasons:
+
+- better for webservice deployment
+- better concurrent access
+- better indexing
+- better support for JSONB
+- better full-text search
+- better long-term scalability
+
+
+15. API
+
+Future stack:
+
+- FastAPI
+- PostgreSQL
+- SQLAlchemy
+- Alembic
+- Pydantic
+- Docker
+
+Planned endpoints:
+
+- GET /organisms
+- GET /organisms/{organism_id}
+- GET /assemblies/{assembly_id}
+- GET /assemblies/{assembly_id}/cds
+- GET /assemblies/{assembly_id}/tai
+- GET /assemblies/{assembly_id}/codon-usage
+- GET /assemblies/{assembly_id}/trna
+- GET /cds/{cds_id}
+- GET /compare
+- POST /import
+- POST /analysis/tai
+
+
+16. Nextflow pipeline
+
+Add only after Python implementation is stable.
+
+Pipeline steps:
+
+1. Input validation
+2. Run tRNAscan-SE
+3. Parse CDS FASTA
+4. Calculate codon usage
+5. Calculate sequence metrics
+6. Calculate tRNA copy numbers
+7. Calculate codon weights
+8. Calculate tAI
+9. Generate reports
+10. Export results
+11. Optionally write results to database
+
+Future structure:
+
+nextflow/
+├── main.nf
+├── nextflow.config
+├── modules/
+│   ├── trnascan.nf
+│   ├── codon_usage.nf
+│   ├── sequence_metrics.nf
+│   ├── tai.nf
+│   └── report.nf
+└── test_data/
+
+
+
+
+18. First milestone
+
+For Postia placenta:
+
+- import CDS FASTA
+- store CDS in SQLite
+- calculate length, GC, GC3
+- detect ambiguous bases
+- detect internal stop codons
+- calculate codon usage per CDS
+- import tRNAscan-SE output
+- calculate tRNA copy numbers
+- calculate tAI per CDS
+- validate tAI against stAIcalc
+- generate tAI histogram
+- generate top/bottom CDS table
+
+
+19. Second milestone
+
+For multiple organisms:
+
+- import at least 5 fungal genomes
+- compare tAI distributions
+- compare codon usage
+- compare tRNA copy numbers
+- add taxonomy
+- add organism-level metadata
+- generate comparative plots
+
+
+20. Third milestone
+
+Biological annotation layer:
+
+- add GO annotations
+- add PFAM domains
+- add gene sets
+- add LCR regions
+- add lifestyle traits
+- test enrichment of high-tAI genes
+- compare high-tAI and low-tAI CDS groups
+
+
+21. Long-term goal
+
+Build a reproducible fungal tAI analysis system that can:
+
+- store fungal genome metadata
+- store CDS-level sequence data
+- store tRNA predictions
+- calculate codon usage
+- calculate tAI
+- validate results
+- compare organisms
+- integrate functional annotations
+- provide interactive exploration
+- expose results through an API
